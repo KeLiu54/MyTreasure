@@ -1,0 +1,6 @@
+Here is a project I designed with my group mates in my year2 study, which is about a VGA game based on FPGA.
+User should prepair DE2 or DE1 Altera FPGA board, and Quartus 18.01.
+The rule of the game is that player need to remote the FPGA board to control Mario to push the box.
+1.Reset sw0
+2.Star  sw1
+3.Direction control  Key0~3
