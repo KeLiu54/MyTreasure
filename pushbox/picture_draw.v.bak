@@ -1,0 +1,49 @@
+module picture_draw(clk50M,rst_n,x_position,y_position,x0,y0,objest_select,colour,writen);
+input clk50M,rst_n;
+input [7:0] x_position;//扫描过程中当前像素点的x坐标
+input [6:0] y_position;//扫描过程中当前像素点的y坐标
+input [7:0] x0;//所需绘制图形的左上角顶点的x坐标
+input [6:0] y0;//所需绘制图形的左上角顶点的y坐标
+input [1:0] object_select;//选择绘制的对象，1:箱子 2：障碍物 3：人物，本质上是选择RAM
+output [2:0] colour;//ram输出的像素点颜色数据
+output writen;
+reg writen_r;//写使能信号寄存器
+reg [9:0] ram_address;//每个箱子或者人物用32*30像素图片，因此需要960个存储深度，RAM位宽设为3，深度为1024，所以地址为10位
+wire [9:0] ram_address_w;
+wire [2:0] colour_man;
+assign ram_address_w=ram_address;
+assign writen=writen_r;
+assign colour=colour_man;
+always@(posedge clk50M or negedge rst_n)
+begin
+if(!rst_n)
+    begin
+	 ram_address<=10'd0;
+	 writen_r<=1'b0;
+	 end
+else
+    begin
+	 if(x_position>=x0 && x_position<=x0+8'd32 && y_position>=y0 && y_position<=y0+7'd30)
+	     begin
+		  ////////////////////////////
+		  if(ram_address<=10'd958)
+		  ram_address<=ram_address+10'd1;
+		  else
+		  ram_address<=10'd0;
+		  ////////////////////////////
+		  writen_r<=1'b1;
+		  ////////////////////////////
+		  end
+	 else
+	     begin
+		  writen_r<=1'b0;
+		  end
+	 end
+end
+endmodule 
+ram_man ram_man_u (
+	.address(address_w),
+	.clock(clk50M),
+	.data(3'd0),
+	.wren(1'b0),
+	.q(colour_man));

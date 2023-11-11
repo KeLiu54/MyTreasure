@@ -1,0 +1,38 @@
+module time_remain(clk50M,rst_n,start,time_remain);
+input clk50M,rst_n;
+input start;//开始控制开关，为1时倒计时启动
+output [5:0] time_remain;
+reg [5:0] time_remain_r;//剩余时间
+reg [31:0] cnt_divide;//分频计数器，产生1Hz时钟
+assign time_remain=time_remain_r;
+always@(posedge clk50M or negedge rst_n)
+begin
+if(!rst_n)
+    begin
+	 time_remain_r<=6'd60;
+	 cnt_divide<=0;
+	 end
+else
+    begin
+	 if(start==1'b1)
+	     begin
+	         if(cnt_divide>=49999999)
+	             begin
+		              cnt_divide<=0;
+		              if(time_remain_r>6'd0)
+		                  time_remain_r<=time_remain_r-6'd1;
+		              else
+			               time_remain_r<=6'd0;	
+		          end
+	         else
+	             begin
+		              cnt_divide<=cnt_divide+1;
+		          end
+	     end
+	 else
+		  begin
+		  time_remain_r<=time_remain_r;
+		  end
+	 end
+end
+endmodule 

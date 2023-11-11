@@ -1,0 +1,187 @@
+module fsm(clk50M,rst_n,key,sw,obeject_sel,x0,y0);
+input clk50M,rst_n;
+input sw;//start switch:1 to start,0 to pasue
+input [3:0] key;//direction control keys:1101=up 1110=down 1011=right 0111=left
+output [1:0] object_sel;//选择绘制的对象，0:黑色填充 1:箱子 2：障碍物 3：人物，本质上是选择RAM
+output [7:0] x0;
+output [6:0] y0;
+parameter up=4'b1101;
+parameter down=4'b1110;
+parameter left=4'b0111;
+parameter right=4'b1011;
+parameter idle=3'b000;
+parameter position_move=3'b001;
+parameter draw_command=3'b011;
+parameter win_judge=3'b010;
+parameter win_lose=3'b110;
+parameter blank=3'b000;
+parameter man_exist=3'b100;//格点中有人物
+parameter box_exist=3'b001;//格点中有箱子
+parameter barrier_exist=3'b010;//格点中有障碍物
+wire [3:0] direction;
+reg k0_r1,k1_r1,k2_r1,k3_r1;//移位寄存法检测下降沿所需的寄存器
+reg k0_r2,k1_r2,k2_r2,k3_r2;//移位寄存法检测下降沿所需的寄存器
+reg [2:0] equal_cell[4:0];//等效格点，共有5*4个等效格点，每个等效格点占32*30像素，等效格点三位分别表示人物属性、障碍物属性和箱子属性，如3'b100表示此格点要显示人物
+reg [2:0] state;
+reg [4:0] man_cell_num;//人物的等效格点数
+reg [2:0] cell_x,cell_y;//等效格点的x、y坐标
+reg [9:0] cell_draw_cnt;//绘制每个等效格点需要960个时钟，需要用计数器计数
+reg [1:0] obeject_sel_r;
+reg [7:0] x0_r;
+reg [6:0] y0_r;
+wire [4:0] cell_num;//等效格点数
+wire flag_k0,flag_k1,flag_k2,flag_k3;//为1代表按键按下
+assign flag_k0=(~k0_r1)&&k0_r2;//检测k0下降沿
+assign flag_k1=(~k1_r1)&&k1_r2;//检测k1下降沿
+assign flag_k2=(~k2_r1)&&k2_r2;//检测k2下降沿
+assign flag_k3=(~k3_r1)&&k3_r2;//检测k3下降沿
+assign direction={flag_k3,flag_k2,flag_k1,flag_k0};
+assign cell_num=cell_x+5*cell_y;
+assign object_sel=obeject_sel_r;
+assign x0=x0_r;
+assign y0=y0_r;
+always@(posedge clk50M or negedge rst_n)
+begin
+if(!rst_n)
+    begin
+	 k0_r1<=1'b1;
+	 k0_r2<=1'b1;
+	 k1_r1<=1'b1;
+	 k1_r2<=1'b1;
+	 k2_r1<=1'b1;
+	 k2_r2<=1'b1;
+	 k3_r1<=1'b1;
+	 k3_r2<=1'b1;
+	 cell_x<=3'd0;
+	 cell_y<=3'd0;
+	 cell_draw_cnt<=10'd0;
+	 end
+else
+    begin
+	 k0_r1<=key[0];
+	 k0_r2<=k0_r1;
+	 k1_r1<=key[1];
+	 k1_r2<=k1_r1;
+	 k2_r1<=key[2];
+	 k2_r2<=k2_r1;
+	 k3_r1<=key[3];
+	 k3_r2<=k3_r1;
+    case(state)
+	 idle://-----------------------------------------------------//
+	      begin
+	          if(sw==1'b1)
+			    state<=position_move;
+			    else
+			    state<=idle;
+			end
+	 position_move://-----------------------------------------------------//
+	      begin
+			    case(direction)
+				     up:
+					      begin
+							    if(man_cel_num>=5'd15)
+								     begin
+									      case(equal_cell[man_cel_num-5'd5])
+											blank:
+											     begin
+												  man_cel_num<=man_cel_num-5'd5;
+												  equal_cell[man_cel_num]<=blank;
+												  equal_cell[man_cel_num-5'd5]<=man_exist;
+												  state<=draw_command;
+												  end
+											box_exist:
+											     begin
+												  
+												  end
+										   barrier_exist:
+											     begin
+												  
+												  end
+											man_exist:
+											     begin
+												  state<=state;
+												  end
+											endcase
+									  end
+								 else if(man_cel_num>=5'd10)
+								     begin
+									  
+									  end
+								 else if(man_cel_num>=5'd5)
+								     begin
+									  
+									  end  
+							end
+					  down:
+					      begin
+							
+							end
+					  left:
+					      begin
+							
+							end
+					  right:
+					      begin
+							
+							end
+					  default:state<=state;
+				 endcase
+			end
+	 draw_command://-----------------------------------------------------//
+	      begin
+			if(cell_draw_cnt>=10'd959)
+			begin
+			    cell_draw_cnt<=10'd0;
+			    if(cell_x>=3'd4)
+				     begin
+					      cell_x<=3'd0;
+					      if(cell_y>=3'd3)
+							    cell_y<=3'd0;
+							else
+							    cell_y<=cell_y+3'd1;
+					  end
+			    else
+				     begin
+					      cell_x<=cell_x+3'd1;
+					  end
+			end
+		   else
+		   begin
+		       cell_draw_cnt<=cell_draw_cnt+10'd1;
+		   end
+		   x0_r<=4*cell_x;
+			y0_r<=5*cell_y;
+			case(equal_cell[cell_num])
+			blank:
+			    begin
+				 object_sel_r<=2'd0;
+				 end
+			box_exist:
+			    begin
+				 object_sel_r<=2'd1;
+				 end
+			barrier_exist:
+			    begin
+				 object_sel_r<=2'd2;
+				 end
+			man_exist:
+			    begin
+				 object_sel_r<=2'd3;
+				 end
+			default:state<=state;
+			endcase
+		
+			end
+	 win_judge://-----------------------------------------------------//
+	      begin
+			
+			end
+	 win_lose://-----------------------------------------------------//
+	      begin
+			
+			end
+	 default:state<=state;
+	 endcase
+    end
+end
+endmodule 
